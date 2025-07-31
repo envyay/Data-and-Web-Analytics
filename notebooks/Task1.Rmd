@@ -1,0 +1,282 @@
+---
+title: "Task1"
+author: "Nguyen Vi An"
+date: "2025-07-01"
+output: html_document
+---
+
+# 1. **Introduction**
+
+# 2. **Task 1**
+
+### Set Working Directory
+
+```{r}
+knitr::opts_knit$set(root.dir = "C:/Users/ADMIN/Documents/R/DataAnalyticsCW/notebooks")
+```
+
+```{r}
+getwd()
+```
+
+### Install & Loading Packages
+
+```{r}
+install.packages(c("tidyverse", "readr", "imputeTS", "naniar", "VIM", "recipes", "Hmisc", "psych", "skimr","knitr"))
+```
+
+```{r}
+library(tidyverse) #include dplyr, ggplot2, ...
+library(readr)
+library(imputeTS) #Time-series missing data imputation
+library(naniar) #help us to summarise and visualize missing data
+library(dplyr)
+#library(Hmisc)
+library(skimr)
+library(VIM) #Visualization and Imputation of Missing values: kNN(), aggr(), matrixplot()
+library(recipes)
+library(psych)
+library(ggplot2)
+library(ggcorrplot)
+```
+
+### Read and Understand the Dataset
+
+```{r}
+df <- read.csv("../data/Web Analytic_Dataset.csv", header = TRUE, sep = ";")
+print(df)
+```
+
+### Data Cleaning
+
+```{r}
+
+```
+
+### Dimension of dataset
+
+```{r}
+cat("The number of data points = ", nrow(df), "\n")
+cat("The number of variables = ", ncol(df))
+```
+
+```{r}
+describe(df)
+```
+
+```{r}
+glimpse(df) #help us to see the null data (highligted by red)
+```
+
+### Classify categorical/numerical variables
+
+```{r}
+skim(df)
+```
+
+```{r}
+sapply(df, class)
+```
+
+### Convert to Numeric
+
+```{r}
+df$Revenue <- as.numeric(gsub(",", "", df$Revenue))
+df$Transactions = as.numeric(gsub(",", "",df$Transactions))
+df$Sessions = as.numeric(gsub(",", "",df$Sessions))
+df$Users = as.numeric(gsub(",", "",df$Users))
+df$New.Users = as.numeric(gsub(",", "",df$New.Users))
+```
+
+## **2.1 Task a**
+
+```{r}
+library(knitr)
+kable(as.data.frame(df$`Source...Medium`),
+      col.names = "Source / Medium",
+      caption="Sources of traffic to the website")
+```
+
+```{r}
+# Compare total revenue
+df_summary <- df %>%
+  group_by(`Source...Medium`, Year) %>%
+  summarise(total_revenue = sum(Revenue, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_revenue))
+  print(df_summary)
+
+
+ggplot(df_summary, aes(x = factor(Year), y = total_revenue, fill = `Source...Medium`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Revenue by traffic source and year",
+       x = "Year", y = "Revenue (million)") +
+  theme_minimal()
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Convert Revenue column to numeric
+df$Revenue <- as.numeric(gsub(",", "", df$Revenue))
+
+# Total revenue by source and year
+revenue_by_source_year <- df %>%
+  group_by(Source...Medium, Year) %>%
+  summarise(total_revenue = sum(Revenue, na.rm = TRUE), .groups = "drop")
+
+# Top three and the revenue each year
+top3_resources <- revenue_by_source_year %>%
+  group_by(Year) %>%
+  slice_max(order_by = total_revenue, n = 3) %>%
+  ungroup()
+
+print(top3_resources)
+
+# Plot
+ggplot(top3_resources, aes(x = factor(Year), y = total_revenue, fill = `Source...Medium`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = total_revenue), vjust = -0.5, position = position_dodge(width = 0.9), size = 3) +
+  labs(title = "Top 3 revenue each year",
+       x = "Year", y = "Revenue") +
+  theme_minimal()
+
+```
+
+## **2.2 Task b**
+
+Assume Source/Medium as device:
+
+```{r}
+library(dplyr)
+device_summary <- df %>%
+  group_by(`Source...Medium`, Year, `Month.of.the.year`) %>%
+  summarise(total_users = sum(Users, na.rm = TRUE),
+            total_new_users = sum(New.Users, na.rm = TRUE),
+            total_sessions = sum(Sessions, na.rm = TRUE),
+            total_transactions = sum(Transactions, na.rm = TRUE),
+            total_conversion_rate = sum(Conversion.Rate....), .groups = "drop")
+print(device_summary)
+
+#plot User access
+library(ggplot2)
+
+ggplot(device_summary %>% filter(Year == 2019),
+       aes(x = factor(`Source...Medium`), y = total_users, fill = `Source...Medium`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Device usage by user (2019)", x = "Device", y = "Users") +
+  theme_minimal()
+
+
+ggplot(device_summary %>% filter(Year == 2020),
+       aes(x = factor(`Source...Medium`), y = total_users, fill = `Source...Medium`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Device usage by user (2020)", x = "Device", y = "Users") +
+  theme_minimal()
+
+
+ggplot(device_summary %>% filter(Year == 2019),
+       aes(x = factor(`Source...Medium`), y = total_new_users, fill = `Source...Medium`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Device usage by new user (2019)", x = "Device", y = "New Users") +
+  theme_minimal()
+
+
+ggplot(device_summary %>% filter(Year == 2020),
+       aes(x = factor(`Source...Medium`), y = total_new_users, fill = `Source...Medium`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Device usage by new user (2020)", x = "Device", y = "New Users") +
+  theme_minimal()
+
+
+df$YearMonth <- paste(df$Year, sprintf("%02d", df$`Month.of.the.year`), sep = "-")
+ggplot(device_summary, aes(x = factor(df$YearMonth), y = total_conversion_rate, color = `Source...Medium`, group = `Source...Medium`)) +
+  geom_line(linewidth = 1.2) +
+  labs(title = "Conversion rate by device per month and year", x = "YearMonth", y = "Conversion Rate") +
+  theme_minimal()
+```
+
+## **2.3 Task c**
+
+```{r}
+df$`Bounce.Rate` <- as.numeric(gsub("%", "", df$`Bounce.Rate`))
+df$`Conversion.Rate....` <- as.numeric(gsub("%", "", df$`Conversion.Rate....`))
+```
+
+```{r}
+cor_matrix <- cor(df[, c("Bounce.Rate", "Conversion.Rate....", "Transactions", "Revenue")], use = "complete.obs")
+
+print(cor_matrix)
+
+#install.packages("corrplot")
+library(corrplot)
+
+corrplot(cor_matrix,
+         method = "color",       
+         type = "upper",         
+         addCoef.col = "black",  
+         tl.col = "black",       
+         tl.srt = 45,           
+         col = colorRampPalette(c("blue", "white", "red"))(200),
+         title = "Heatmap of Correlation Matrix",
+         mar = c(0, 0, 2, 0))     
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = `Bounce.Rate`, y = `Conversion.Rate....`)) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  geom_point(color = "black") +
+  labs(title = "Bounce Rate vs Conversion Rate")
+```
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = `Bounce.Rate`, y = `Transactions`)) +
+  geom_smooth(method = "lm", se = FALSE, color = "green") +
+  geom_point(color = "brown") +
+  labs(title = "Bounce Rate vs Transactions")
+```
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = `Bounce.Rate`, y = `Revenue`)) +
+  geom_smooth(method = "lm", se = FALSE, color = "brown") +
+  geom_point(color = "purple") +
+  labs(title = "Bounce Rate vs Revenue")
+```
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = `Conversion.Rate....`, y = `Transactions`)) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  geom_point(color = "black") +
+  labs(title = "Conversion Rate vs Transactions")
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(df, aes(x = Conversion.Rate...., y = Revenue)) +
+  geom_smooth(method = "lm", se = FALSE, color = "yellow") +
+  geom_point(color = "#0072B2", size = 2, alpha = 0.6) +
+  labs(title = "Conversion Rate and Revenue",
+       x = "Conversion Rate (%)",
+       y = "Revenue") +
+  theme_minimal()
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = Transactions, y = Revenue)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "green") +
+  labs(title = "Transactions vs Revenue")
+
+```
+
+# **4. References**
+
+# **5. Appendix**
