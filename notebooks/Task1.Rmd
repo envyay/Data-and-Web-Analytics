@@ -22,13 +22,12 @@ getwd()
 ### Install & Loading Packages
 
 ```{r}
-install.packages(c("tidyverse", "readr", "imputeTS", "naniar", "VIM", "recipes", "Hmisc", "psych", "skimr","knitr"))
+install.packages(c("tidyverse", "readr", "naniar", "VIM", "recipes", "Hmisc", "psych", "skimr","knitr"))
 ```
 
 ```{r}
 library(tidyverse) #include dplyr, ggplot2, ...
 library(readr)
-library(imputeTS) #Time-series missing data imputation
 library(naniar) #help us to summarise and visualize missing data
 library(dplyr)
 #library(Hmisc)
@@ -50,6 +49,9 @@ print(df)
 ### Data Cleaning
 
 ```{r}
+any(is.na(df))
+sum(is.na(df))
+colSums(is.na(df))
 
 ```
 
@@ -158,35 +160,24 @@ device_summary <- df %>%
             total_conversion_rate = sum(Conversion.Rate....), .groups = "drop")
 print(device_summary)
 
-#plot User access
+#Device usage by user
 library(ggplot2)
 
-ggplot(device_summary %>% filter(Year == 2019),
+ggplot(data = device_summary, 
        aes(x = factor(`Source...Medium`), y = total_users, fill = `Source...Medium`)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Device usage by user (2019)", x = "Device", y = "Users") +
-  theme_minimal()
+  labs(title = "Device usage by user", x = "Device", y = "Users") +
+  theme_minimal() +
+  coord_flip()
 
 
-ggplot(device_summary %>% filter(Year == 2020),
-       aes(x = factor(`Source...Medium`), y = total_users, fill = `Source...Medium`)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Device usage by user (2020)", x = "Device", y = "Users") +
-  theme_minimal()
-
-
-ggplot(device_summary %>% filter(Year == 2019),
+#Device usage by new user
+ggplot(data = device_summary, 
        aes(x = factor(`Source...Medium`), y = total_new_users, fill = `Source...Medium`)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Device usage by new user (2019)", x = "Device", y = "New Users") +
-  theme_minimal()
-
-
-ggplot(device_summary %>% filter(Year == 2020),
-       aes(x = factor(`Source...Medium`), y = total_new_users, fill = `Source...Medium`)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Device usage by new user (2020)", x = "Device", y = "New Users") +
-  theme_minimal()
+  labs(title = "Device usage by new user", x = "Device", y = "New Users") +
+  theme_minimal() +
+  coord_flip()
 
 
 df$YearMonth <- paste(df$Year, sprintf("%02d", df$`Month.of.the.year`), sep = "-")
