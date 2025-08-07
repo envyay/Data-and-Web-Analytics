@@ -85,12 +85,13 @@ ggplot(df1_long, aes(x = Variable, y = Value)) +
 library(dplyr)
 library(ggplot2)
 library(tidyr)
-# Bước 1: Chọn cột 2 đến 6 và chuyển 0 thành NA
+
+# Select column 2 - 6 and convert to NA
 df_subset <- df1 %>%
   select(2:6) %>%
   mutate(across(everything(), ~na_if(., 0)))
 
-# Bước 2: Thay NA bằng median trong từng cột
+# Deal NA by median each column
 for (colname in names(df_subset)) {
   if (any(is.na(df_subset[[colname]]))) {
     col_median <- median(df_subset[[colname]], na.rm = TRUE)
@@ -102,7 +103,7 @@ for (colname in names(df_subset)) {
 df_long_1 <- df_subset %>%
   pivot_longer(cols = 1:5, names_to = "Variable", values_to = "Value")
 
-# Bước 4: Vẽ histogram cho từng cột
+# histogram each column
 ggplot(df_long_1, aes(x = Value)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
   facet_wrap(~ Variable, scales = "free") +
